@@ -1,7 +1,6 @@
 #include <avr/io.h>
 #include <avr/eeprom.h>
 #include "io.h"
-#include "timer.h"
 #include "serialWrite.c"
 #include "io.c"
 #include "displaySM.c"
