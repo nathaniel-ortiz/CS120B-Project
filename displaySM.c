@@ -1,7 +1,9 @@
 #include <avr/io.h>
+#include <avr/eeprom.h>
+#include "patterns.h"
 
 unsigned int cursorPos = 1;
-enum state {init, menu1, menu1_wait, menu2, menu2_wait, eeprom, pattern} state;
+enum state {init, menu1, menu1_wait, menu2, menu2_wait, eeprom, eeprom_written, pattern, pattern_wait} state;
 unsigned char menu_state;
 
 #define UP (PINB == 0xFD)
@@ -10,7 +12,35 @@ unsigned char menu_state;
 #define RIGHT (PINB == 0xFB)
 #define SELECT (PINB == 0xEF)
 
-unsigned int xyz[] = {0, 0, 0};
+unsigned int xyz[] = {0, 0, 0}; //x is horizontal axis, y is vertical axis, z is level
+unsigned short int data = 0x0000;
+static unsigned int pinout[3][3] = {
+	{1, 4, 7},
+	{2, 5, 8},
+	{3, 6, 9}
+};
+
+void updateCube(unsigned int coord[]) {
+	data = 0x0000;
+	
+	switch(coord[2]) {
+		case 0:
+			data = 0x0060;
+			data = data ^ (0x1000 >> (pinout[xyz[0]][xyz[1]] - 1));
+			serialWrite(data);
+			break;
+		case 1:
+			data = 0x00A0;
+			data = data ^ (0x1000 >> (pinout[xyz[0]][xyz[1]] - 1));
+			serialWrite(data);
+			break;
+		case 2:
+			data = 0x00C0;
+			data = data ^ (0x1000 >> (pinout[xyz[0]][xyz[1]] - 1));
+			serialWrite(data);
+			break;
+	}
+}
 
 void displaySM(unsigned char state) {
 	switch(state) {
@@ -64,7 +94,7 @@ void displaySM(unsigned char state) {
 			}
 			else if(SELECT) {
 				if(cursorPos == 5) {
-					//flip selected LED on/off
+					updateCube(xyz);
 				}
 				if(cursorPos == 7) {
 					cursorPos = 1;
@@ -77,7 +107,7 @@ void displaySM(unsigned char state) {
 			break;
 		case menu2:
 			LCD_ClearScreen();
-			LCD_DisplayString(1, "<*Save *Patterns");
+			LCD_DisplayString(1, "< *Save *Pattern");
 			LCD_Cursor(cursorPos);
 			state = menu2_wait;
 			break;
@@ -91,6 +121,7 @@ void displaySM(unsigned char state) {
 					state = eeprom;
 				}
 				else if(cursorPos == 7) {
+					cursorPos = 1;
 					state = pattern;
 				}
 			}
@@ -119,10 +150,60 @@ void displaySM(unsigned char state) {
 			}
 			break;
 		case eeprom:
-			state = menu1;
+			eeprom_write_word(0x0000, data);
+			state = eeprom_written;
 			break;
+		case eeprom_written:
+			LCD_ClearScreen();
+			LCD_DisplayString(1, "Saved to EEPROM!");
+			delay_ms(1000);
+			state = menu2;
 		case pattern:
-			state = menu1;
+			LCD_ClearScreen();
+			LCD_DisplayString(1, "< *Wave *Snake");
+			LCD_Cursor(cursorPos);
+			break;
+		case pattern_wait:
+			if(SELECT) {
+				delay_ms(200);
+				if(cursorPos == 1) {
+					state = menu2;
+				}
+				else if(cursorPos == 3) {
+					wavePattern();
+					state = pattern;
+				}
+				else if(cursorPos == 9) {
+					snakePattern();
+					state = pattern;
+				}
+			}
+			else if(LEFT) {
+				delay_ms(200);
+				if(cursorPos == 3) {
+					cursorPos = 1;
+					LCD_Cursor(cursorPos);
+				}
+				else if(cursorPos == 9) {
+					cursorPos = 3;
+					LCD_Cursor(cursorPos);
+				}
+			}
+			else if(RIGHT) {
+				delay_ms(200);
+				if(cursorPos == 1) {
+					cursorPos = 3;
+					LCD_Cursor(cursorPos);
+				}
+				else if(cursorPos == 3) {
+					cursorPos = 9;
+					LCD_Cursor(cursorPos);
+				}
+			}
+			else {
+				state = pattern_wait;
+			}
+			break;
 	}
 	menu_state = state;
-}
+} 

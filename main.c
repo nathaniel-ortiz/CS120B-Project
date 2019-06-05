@@ -1,10 +1,10 @@
 #include <avr/io.h>
+#include <avr/eeprom.h>
 #include "io.h"
 #include "timer.h"
 #include "serialWrite.c"
 #include "io.c"
 #include "displaySM.c"
-#include "patterns.h"
 #include "patterns.c"
 
 #define SET_BIT(p,i) ((p) |= (1 << (i)))
@@ -20,12 +20,9 @@ int main(void) {
 	DDRD = 0xFF; PORTD = 0x00;
 	
 	LCD_init();
-	
-	//unsigned short int pattern = 0x0000; //16 bits requires two shift registers by daisy chaining them together
-		
+			
 	while(1) {
-		serialWrite(0xFF80);
+		serialWrite(eeprom_read_word(0x0000)); //always load value stored in EEPROM and write to the cube
 		displaySM(menu_state);
-		wavePattern();
 	}
 }
