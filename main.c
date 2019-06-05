@@ -4,7 +4,6 @@
 #include "serialWrite.c"
 #include "io.c"
 #include "displaySM.c"
-#include "patterns.h"
 #include "patterns.c"
 
 #define SET_BIT(p,i) ((p) |= (1 << (i)))
