@@ -14,9 +14,8 @@
 
 void serialWrite(unsigned short int data)
 {
-	RCLK_low();
 	SRCLK_low();
-	for (int i = 0; i < 16; i++) { //shift bits in, change the number of iterations of the for loop if not using two shift registers. by changing the number of iterations you can daisy chain as many registers as needed
+	for (int i = 0; i < 16; i++) { //shift bits in, change the number of iterations of the for loop if not using two shift registers. by changing the number of iterations you can daisy chain as many registers as needed. e.g. 8 for one shift register, 16 for two, 24 for three, etc.
 		if ((data & 0x01) == 0x0001) { //send data
 			DATA_high();
 		}
