@@ -8,16 +8,16 @@ unsigned char menu_state;
 
 #define UP (PINB == 0xFD)
 #define DOWN (PINB == 0xFE)
-#define LEFT (PINB == 0xF7)
-#define RIGHT (PINB == 0xFB)
+#define LEFT (PINB == 0xFB)
+#define RIGHT (PINB == 0xF7)
 #define SELECT (PINB == 0xEF)
 
 unsigned int xyz[] = {0, 0, 0}; //x is horizontal axis, y is vertical axis, z is level
 unsigned short int data = 0x0000;
-static unsigned int pinout[3][3] = {
-	{1, 4, 7},
+const unsigned int pinout[3][3] = {
+	{3, 6, 9},
 	{2, 5, 8},
-	{3, 6, 9}
+	{1, 4, 7}
 };
 
 void updateCube(unsigned int coord[]) {
@@ -25,18 +25,18 @@ void updateCube(unsigned int coord[]) {
 	
 	switch(coord[2]) {
 		case 0:
-			data = 0x0060;
-			data = data ^ (0x1000 >> (pinout[xyz[0]][xyz[1]] - 1));
+			data = 0x0030;
+			data = data | (0x8000 >> (pinout[xyz[1]][xyz[0]] - 1));
 			serialWrite(data);
 			break;
 		case 1:
-			data = 0x00A0;
-			data = data ^ (0x1000 >> (pinout[xyz[0]][xyz[1]] - 1));
+			data = 0x0050;
+			data = data | (0x8000 >> (pinout[xyz[1]][xyz[0]] - 1));
 			serialWrite(data);
 			break;
 		case 2:
-			data = 0x00C0;
-			data = data ^ (0x1000 >> (pinout[xyz[0]][xyz[1]] - 1));
+			data = 0x0060;
+			data = data | (0x8000 >> (pinout[xyz[1]][xyz[0]] - 1));
 			serialWrite(data);
 			break;
 	}
@@ -46,10 +46,11 @@ void displaySM(unsigned char state) {
 	switch(state) {
 		case init:
 			LCD_init();
+			serialWrite(eeprom_read_word(0x0000)); //always load value stored in EEPROM and write to the cube
 			state = menu1;
 			break;
 		case menu1:
-			LCD_DisplayString(1, "XYZ * >");
+			LCD_DisplayString(1, "XYZ *On *Off >");
 			for(int i = 0; i < 3; i++) {
 				LCD_Cursor(17 + i);
 				LCD_WriteData(xyz[i] + '0');
@@ -59,44 +60,65 @@ void displaySM(unsigned char state) {
 			break;
 		case menu1_wait:
 			if(UP && (cursorPos == 1 || cursorPos == 2 || cursorPos == 3)) {
-				delay_ms(200);
+				while(!UP);
+				delay_ms(100);
 				if(xyz[cursorPos - 1] != 2) {
 					xyz[cursorPos - 1]++;
 				}
 				state = menu1;
 			}
 			else if(DOWN && (cursorPos == 1 || cursorPos == 2 || cursorPos == 3)) {
-				delay_ms(200);
+				while(!DOWN);
+				delay_ms(100);
 				if(xyz[cursorPos - 1] != 0) {
 					xyz[cursorPos - 1]--;
 				}
 				state = menu1;
 			}
-			else if(LEFT && cursorPos != 1) {
-				delay_ms(200);
-				if(cursorPos == 5 || cursorPos == 7) {
-					cursorPos -= 2;
-				}
-				else {
+			else if(LEFT) {
+				while(!LEFT);
+				delay_ms(100);
+				if(cursorPos == 2 || cursorPos == 3) {
 					cursorPos--;
+				}
+				else if(cursorPos == 5) {
+					cursorPos = 3;
+				}
+				else if(cursorPos == 9) {
+					cursorPos = 5;
+				}
+				else if(cursorPos == 14) {
+					cursorPos = 9;
 				}
 				state = menu1;
 			}
-			else if(RIGHT && cursorPos != 7) {
-				delay_ms(200);
-				if(cursorPos == 3 || cursorPos == 5) {
-					cursorPos += 2;
-				}
-				else {
+			else if(RIGHT) {
+				while(!RIGHT);
+				delay_ms(100);
+				if(cursorPos == 1 || cursorPos == 2) {
 					cursorPos++;
+				}
+				else if(cursorPos == 3) {
+					cursorPos = 5;
+				}
+				else if(cursorPos == 5) {
+					cursorPos = 9;
+				}
+				else if(cursorPos == 9) {
+					cursorPos = 14;
 				}
 				state = menu1;
 			}
 			else if(SELECT) {
+				while(!SELECT);
+				delay_ms(100);
 				if(cursorPos == 5) {
 					updateCube(xyz);
 				}
-				if(cursorPos == 7) {
+				else if(cursorPos == 9) {
+					serialWrite(0x0000);
+				}
+				else if(cursorPos == 14) {
 					cursorPos = 1;
 					state = menu2;
 				}
@@ -113,35 +135,38 @@ void displaySM(unsigned char state) {
 			break;
 		case menu2_wait:
 			if(SELECT) {
-				delay_ms(200);
+				while(!SELECT);
+				delay_ms(100);
 				if(cursorPos == 1) {
 					state = menu1;
 				}
-				else if(cursorPos == 2) {
+				else if(cursorPos == 3) {
 					state = eeprom;
 				}
-				else if(cursorPos == 7) {
+				else if(cursorPos == 9) {
 					cursorPos = 1;
 					state = pattern;
 				}
 			}
 			else if(LEFT) {
-				delay_ms(200);
-				if(cursorPos == 2) {
+				while(!LEFT);
+				delay_ms(100);
+				if(cursorPos == 3) {
 					cursorPos = 1;
 				}
-				else if(cursorPos == 7) {
-					cursorPos = 2;
+				else if(cursorPos == 9) {
+					cursorPos = 3;
 				}
 				state = menu2;
 			}
 			else if(RIGHT) {
-				delay_ms(200);
+				while(!RIGHT);
+				delay_ms(100);
 				if(cursorPos == 1) {
-					cursorPos = 2;
+					cursorPos = 3;
 				}
-				if(cursorPos == 2) {
-					cursorPos = 7;
+				else if(cursorPos == 3) {
+					cursorPos = 9;
 				}
 				state = menu2;
 			}
@@ -162,24 +187,29 @@ void displaySM(unsigned char state) {
 			LCD_ClearScreen();
 			LCD_DisplayString(1, "< *Wave *Snake");
 			LCD_Cursor(cursorPos);
+			state = pattern_wait;
 			break;
 		case pattern_wait:
 			if(SELECT) {
-				delay_ms(200);
+				while(!SELECT);
+				delay_ms(100);
 				if(cursorPos == 1) {
 					state = menu2;
 				}
 				else if(cursorPos == 3) {
 					wavePattern();
+					serialWrite(data);
 					state = pattern;
 				}
 				else if(cursorPos == 9) {
 					snakePattern();
+					serialWrite(data);
 					state = pattern;
 				}
 			}
 			else if(LEFT) {
-				delay_ms(200);
+				while(!LEFT);
+				delay_ms(100);
 				if(cursorPos == 3) {
 					cursorPos = 1;
 					LCD_Cursor(cursorPos);
@@ -188,9 +218,11 @@ void displaySM(unsigned char state) {
 					cursorPos = 3;
 					LCD_Cursor(cursorPos);
 				}
+				state = pattern;
 			}
 			else if(RIGHT) {
-				delay_ms(200);
+				while(!RIGHT);
+				delay_ms(100);
 				if(cursorPos == 1) {
 					cursorPos = 3;
 					LCD_Cursor(cursorPos);
@@ -199,6 +231,7 @@ void displaySM(unsigned char state) {
 					cursorPos = 9;
 					LCD_Cursor(cursorPos);
 				}
+				state = pattern;
 			}
 			else {
 				state = pattern_wait;

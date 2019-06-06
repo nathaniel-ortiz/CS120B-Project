@@ -19,9 +19,9 @@ int main(void) {
 	DDRD = 0xFF; PORTD = 0x00;
 	
 	LCD_init();
+	data = eeprom_read_word(0x0000);
 			
 	while(1) {
-		serialWrite(eeprom_read_word(0x0000)); //always load value stored in EEPROM and write to the cube
 		displaySM(menu_state);
 	}
 }
