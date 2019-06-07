@@ -18,8 +18,7 @@ int main(void) {
 	DDRC = 0xFF; PORTC = 0x00;
 	DDRD = 0xFF; PORTD = 0x00;
 	
-	LCD_init();
-	data = eeprom_read_word(0x0000);
+	data = eeprom_read_word(0x0000); //ensure global data variable is updated with the current data from the eeprom
 			
 	while(1) {
 		displaySM(menu_state);
